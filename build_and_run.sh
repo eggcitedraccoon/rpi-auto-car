@@ -2,4 +2,4 @@
 
 docker compose down
 
-docker compose up --build --not-attach mqtt-broker
+docker compose up --build --no-attach mqtt-broker
