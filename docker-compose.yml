@@ -1,18 +1,22 @@
-version: "3.9"
-
 services:
   mqtt-broker:
     image: eclipse-mosquitto:2.0
     container_name: mqtt-broker
+    volumes:
+      - ./modules/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
       - "1883:1883"
+    networks:
+      - default
 
   orchestrator:
     build: ./modules/orchestrator
+    container_name: orchestrator
     depends_on:
       - mqtt-broker
 
   motors:
     build: ./modules/motors
+    container_name: motors
     depends_on:
       - mqtt-broker
