@@ -11,7 +11,7 @@ def on_message(client, userdata, msg):
     print(f"[motors] Received command: {command}")
 
 def main():
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.connect(BROKER_ADDRESS)
     client.subscribe(TOPIC)
     client.on_message = on_message

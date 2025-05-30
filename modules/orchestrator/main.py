@@ -7,9 +7,9 @@ import paho.mqtt.client as mqtt
 BROKER_ADDRESS = "mqtt-broker"  # container name in docker-compose.yml
 TOPIC = "/planner/output"
 
-client = mqtt.Client()
 
 def main():
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.connect(BROKER_ADDRESS)
     print("[orchestrator] Connected to MQTT broker")
 
