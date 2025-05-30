@@ -12,13 +12,16 @@ def main():
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.connect(BROKER_ADDRESS)
     print("[orchestrator] Connected to MQTT broker")
-
+    count = 0
     while True:
         # Simulate sending steering angle (e.g., 0 = straight, -1 = left, 1 = right)
-        command = {"steering_angle": 0.0}
+        command = {"steering_angle": count}
         client.publish(TOPIC, json.dumps(command))
         print(f"[orchestrator] Published command: {command}")
-        time.sleep(2)
+        count += 0.2
+        if count > 1:
+            count = -1
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
