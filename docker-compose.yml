@@ -20,14 +20,3 @@ services:
     container_name: motors
     depends_on:
       - mqtt-broker
-
-  camera:
-    build:
-      context: ./modules/camera
-    privileged: true
-    devices:
-      - "/dev/video0:/dev/video0"
-    ports:
-      - "8554:8554"
-    restart: unless-stopped
-    command: ["-W", "1920", "-H", "1080", "-F", "47", "/dev/video0"]
