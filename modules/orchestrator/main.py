@@ -18,9 +18,9 @@ def main():
         command = {"steering_angle": count}
         client.publish(TOPIC, json.dumps(command))
         print(f"[orchestrator] Published command: {command}")
-        count += 0.5
-        if count > 10:
-            count = -10
+        count += 1
+        if count > 15:
+            count = -15
         time.sleep(3)
 
 if __name__ == "__main__":
