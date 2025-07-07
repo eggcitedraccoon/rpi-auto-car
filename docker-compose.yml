@@ -20,3 +20,11 @@ services:
     container_name: motors
     depends_on:
       - mqtt-broker
+
+  ws-server:
+    build: ./modules/ws_server
+    container_name: ws-server
+    ports:
+      - "8765:8765"
+    networks:
+      - default
