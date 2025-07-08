@@ -22,4 +22,4 @@ COPY main.py ./
 # Allow subprocess logging immediately
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]
