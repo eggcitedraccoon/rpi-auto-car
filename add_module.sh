@@ -8,16 +8,16 @@ fi
 
 # Create module directory
 MODULE_NAME="$1"
-mkdir -p "$MODULE_NAME"
+mkdir -p "modules/$MODULE_NAME"
 
 # Create requirements.txt
-cat << EOF > "$MODULE_NAME/requirements.txt"
+cat << EOF > "modules/$MODULE_NAME/requirements.txt"
 # modules/$MODULE_NAME/requirements.txt
 paho-mqtt
 EOF
 
 # Create main.py
-cat << EOF > "$MODULE_NAME/main.py"
+cat << EOF > "modules/$MODULE_NAME/main.py"
 # modules/$MODULE_NAME/main.py
 import paho.mqtt.client as mqtt
 import json
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 EOF
 
 # Create Dockerfile
-cat << EOF > "$MODULE_NAME/Dockerfile"
+cat << EOF > "modules/$MODULE_NAME/Dockerfile"
 # modules/$MODULE_NAME/Dockerfile
 
 FROM python:3.9-slim
@@ -54,7 +54,7 @@ COPY main.py ./
 CMD ["python","-u", "main.py"]
 EOF
 
-cat << EOF >> "../shared/module.list"
+cat << EOF >> "shared/module.list"
 module:$MODULE_NAME
 EOF
 
