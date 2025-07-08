@@ -2,6 +2,7 @@ services:
   mqtt-broker:
     image: eclipse-mosquitto:2.0
     container_name: mqtt-broker
+    restart: unless-stopped
     volumes:
       - ./modules/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
@@ -26,5 +27,15 @@ services:
     container_name: ws-server
     ports:
       - "8765:8765"
+    networks:
+      - default
+
+  video-stream:
+    build: ./modules/video_stream
+    container_name: video-stream
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      - ws-server
     networks:
       - default

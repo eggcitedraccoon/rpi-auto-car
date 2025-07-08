@@ -1,0 +1,5 @@
+# modules/video_stream/requirements.txt
+paho-mqtt
+websockets
+numpy
+opencv-python-headless
