@@ -54,4 +54,8 @@ COPY main.py ./
 CMD ["python","-u", "main.py"]
 EOF
 
+cat << EOF >> "../shared/module.list"
+module:$MODULE_NAME
+EOF
+
 echo "Module '$MODULE_NAME' created successfully!"
