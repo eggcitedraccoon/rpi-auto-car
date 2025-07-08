@@ -1,4 +1,4 @@
-# modules/ws_server/Dockerfile
+# modules/ws-server/Dockerfile
 
 FROM python:3.9-slim
 WORKDIR /app

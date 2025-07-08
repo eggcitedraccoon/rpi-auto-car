@@ -1,4 +1,4 @@
-# modules/video_stream/Dockerfile
+# modules/video-stream/Dockerfile
 
 FROM python:3.9-slim
 

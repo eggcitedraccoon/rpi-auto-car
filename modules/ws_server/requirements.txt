@@ -1,3 +1,0 @@
-# modules/ws_server/requirements.txt
-paho-mqtt
-websockets

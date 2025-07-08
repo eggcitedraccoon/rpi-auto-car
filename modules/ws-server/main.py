@@ -1,13 +1,13 @@
-# modules/ws_server/main.py
+# modules/ws-server/main.py
 # import paho.mqtt.client as mqtt
 # import json
 #
 # BROKER_ADDRESS = "mqtt-broker"  # container name in docker-compose.yml
-# TOPIC = "/ws_server"
+# TOPIC = "/ws-server"
 #
 # def on_message(client, userdata, msg):
 #     command = json.loads(msg.payload.decode())
-#     print(f"[ws_server] Received command: {command}")
+#     print(f"[ws-server] Received command: {command}")
 #
 # def main():
 #     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -15,7 +15,7 @@
 #     client.subscribe(TOPIC)
 #     client.on_message = on_message
 #
-#     print("[ws_server] Listening for commands...")
+#     print("[ws-server] Listening for commands...")
 #     client.loop_forever()
 
 import asyncio

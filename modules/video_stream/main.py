@@ -1,4 +1,4 @@
-# modules/video_stream/main.py
+# modules/video-stream/main.py
 import paho.mqtt.client as mqtt
 import json
 import asyncio
@@ -9,11 +9,11 @@ import cv2
 import signal
 
 # BROKER_ADDRESS = "mqtt-broker"  # container name in docker-compose.yml
-# TOPIC = "/video_stream"
+# TOPIC = "/video-stream"
 
 # def on_message(client, userdata, msg):
 #     command = json.loads(msg.payload.decode())
-#     print(f"[video_stream] Received command: {command}")
+#     print(f"[video-stream] Received command: {command}")
 
 # def main():
 #     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -21,7 +21,7 @@ import signal
 #     client.subscribe(TOPIC)
 #     client.on_message = on_message
 #
-#     print("[video_stream] Listening for commands...")
+#     print("[video-stream] Listening for commands...")
 #     client.loop_forever()
 #
 # if __name__ == "__main__":

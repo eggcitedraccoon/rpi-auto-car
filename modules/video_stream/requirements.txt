@@ -1,4 +1,4 @@
-# modules/video_stream/requirements.txt
+# modules/video-stream/requirements.txt
 paho-mqtt
 websockets
 numpy
