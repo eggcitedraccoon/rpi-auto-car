@@ -28,7 +28,7 @@ import cv2
 #     main()
 
 async def stream():
-    uri = "ws://websocket-server:8765"
+    uri = "ws://ws-server:8765"
     width, height = 1920, 1080
     frame_size = width * height * 3
 
