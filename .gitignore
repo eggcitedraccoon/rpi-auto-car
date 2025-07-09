@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 
 git-watcher-logs/
+/docker_fix.sh
