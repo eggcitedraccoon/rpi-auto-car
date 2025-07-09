@@ -15,18 +15,14 @@ services:
     container_name: orchestrator
     depends_on:
       - mqtt-broker
+    networks:
+      - default
 
   motors:
     build: ./modules/motors
     container_name: motors
     depends_on:
       - mqtt-broker
-
-  ws-server:
-    build: modules/ws-server
-    container_name: ws-server
-    ports:
-      - "8765:8765"
     networks:
       - default
 
@@ -34,7 +30,7 @@ services:
     build: ./modules/video-stream
     container_name: video-stream
     restart: unless-stopped
-    depends_on:
-      - ws-server
+    ports:
+      - "8765:8765"
     networks:
       - default

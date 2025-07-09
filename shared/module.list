@@ -1,5 +1,5 @@
-module:motors
-module:mqtt
-module:orchestrator
-module:video-stream
-module:ws-server
+modules/motors
+modules/mqtt
+modules/orchestrator
+modules/video-stream
+modules/ws-server
