@@ -54,8 +54,20 @@ COPY main.py ./
 CMD ["python","-u", "main.py"]
 EOF
 
+# Add module to module.list
 cat << EOF >> "shared/module.list"
-module:$MODULE_NAME
+modules/$MODULE_NAME
+EOF
+
+# Add module service to docker-compose.yml
+cat << EOF >> "docker-compose.yml"
+
+  $MODULE_NAME:
+    build: ./modules/$MODULE_NAME
+    container_name: $MODULE_NAME
+    restart: unless-stopped
+    networks:
+      - default
 EOF
 
 echo "Module '$MODULE_NAME' created successfully!"
