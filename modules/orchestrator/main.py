@@ -16,7 +16,7 @@ def main():
     while True:
         # Simulate sending steering angle (e.g., 0 = straight, -1 = left, 1 = right)
         command = {"steering_angle": count}
-        client.publish(TOPIC, json.dumps(command))
+        #client.publish(TOPIC, json.dumps(command))
         print(f"[orchestrator] Published command: {command}")
         count += 1.5
         if count > 15:
