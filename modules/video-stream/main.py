@@ -97,10 +97,10 @@ async def send_frame(websocket, frame_data):
         logger.error(f"Error sending frame: {e}")
         return False
 
-async def handle_client(websocket, path):
+async def handle_client(websocket, path=None):
     client_address = websocket.remote_address
     logger.info(f"New client connected: {client_address}")
-    
+
     global connected_clients
     connected_clients.add(websocket)
     logger.info(f"Added client to connected_clients. Total clients: {len(connected_clients)}")
@@ -125,13 +125,13 @@ async def main():
     host = "0.0.0.0"
     port = 8765
 
-    # Start video processing in the background
-    video_task = asyncio.create_task(process_video_frames())
-
     # Start the websocket server
     async with websockets.serve(handle_client, host, port):
         logger.info(f"Websocket server started on {host}:{port}")
         await asyncio.Future()  # Run forever
+
+    # Start video processing in the background
+    video_task = asyncio.create_task(process_video_frames())
 
 if __name__ == "__main__":
     logger.info("Starting video-stream module")
