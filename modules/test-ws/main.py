@@ -21,7 +21,7 @@ import websockets
 #     client.loop_forever()
 
 async def test():
-    uri = "ws://localhost:8765"
+    uri = "ws://video-stream:8765"
     async with websockets.connect(uri) as ws:
         await ws.send(b"hello camera feed")
         print("Sent test message")
