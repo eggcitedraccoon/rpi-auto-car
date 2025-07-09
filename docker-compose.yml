@@ -34,3 +34,10 @@ services:
       - "8765:8765"
     networks:
       - default
+
+  test-ws:
+    build: ./modules/test-ws
+    container_name: test-ws
+    restart: unless-stopped
+    networks:
+      - default
