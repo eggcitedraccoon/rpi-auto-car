@@ -41,5 +41,7 @@ services:
     build: ./modules/test-ws
     container_name: test-ws
     restart: unless-stopped
+    depends_on:
+      - video-stream
     networks:
       - default
