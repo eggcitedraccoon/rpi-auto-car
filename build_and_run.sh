@@ -26,4 +26,6 @@ fi
 
 docker compose down
 
-docker compose up --build --no-attach mqtt-broker
+docker compose build --no-cache
+
+docker compose up
