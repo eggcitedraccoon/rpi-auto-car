@@ -4,7 +4,7 @@ import time
 import json
 import paho.mqtt.client as mqtt
 
-BROKER_ADDRESS = "mqtt-broker"  # container name in docker-compose.yml
+BROKER_ADDRESS = "mqtt"  # container name in docker-compose.yml
 TOPIC = "/planner/output"
 
 
@@ -16,8 +16,8 @@ def main():
     while True:
         # Simulate sending steering angle (e.g., 0 = straight, -1 = left, 1 = right)
         command = {"steering_angle": count}
-        #client.publish(TOPIC, json.dumps(command))
-        #print(f"[orchestrator] Published command: {command}")
+        client.publish(TOPIC, json.dumps(command))
+        print(f"[orchestrator] Published command: {command}")
         count += 1.5
         if count > 15:
             count = -15

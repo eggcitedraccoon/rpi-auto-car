@@ -3,7 +3,7 @@
 import json
 import paho.mqtt.client as mqtt
 
-BROKER_ADDRESS = "mqtt-broker"
+BROKER_ADDRESS = "mqtt"
 TOPIC = "/planner/output"
 
 def on_message(client, userdata, msg):

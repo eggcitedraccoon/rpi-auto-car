@@ -3,4 +3,4 @@ modules/mqtt
 modules/orchestrator
 modules/video-stream
 modules/ws-server
-module:test-ws
+modules/test-ws
