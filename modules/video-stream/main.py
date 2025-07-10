@@ -6,12 +6,15 @@ import websockets
 import subprocess
 import numpy as np
 import cv2
+import os
+import time
+from pathlib import Path
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
 logger = logging.getLogger('video-stream')
-
+import logging
 # BROKER_ADDRESS = "mqtt-broker"  # container name in docker-compose.yml
 # TOPIC = "/video-stream"
 
@@ -29,157 +32,244 @@ logger = logging.getLogger('video-stream')
 #     client.loop_forever()
 #
 
-# Global set to track connected clients
-connected_clients = set()
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-async def process_video_frames():
-    width, height = 1920, 1080
-    frame_size = width * height * 3
 
-    # Create a black frame as a placeholder when no video is available
-    black_frame = np.zeros((height, width, 3), np.uint8)
-    ret, black_jpeg = cv2.imencode('.jpg', black_frame)
-    black_jpeg_bytes = black_jpeg.tobytes() if ret else None
+class VideoStreamManager:
+    def __init__(self,
+                 udp_url="udp://172.17.0.1:5000",
+                 ws_url="ws://ws-server:8765",
+                 test_images_dir="/app/testImages",
+                 stream_check_timeout=5,
+                 test_image_interval=1 / 30,  # 30fps default
+                 width=1920,
+                 height=1080):
+        self.udp_url = udp_url
+        self.ws_url = ws_url
+        self.test_images_dir = test_images_dir
+        self.stream_check_timeout = stream_check_timeout
+        self.test_image_interval = test_image_interval
+        self.width = width
+        self.height = height
+        self.frame_size = width * height * 3
 
-    # Flag to track if we're using the real video stream or placeholder
-    using_placeholder = False
-    ffmpeg_process = None
+    def check_stream_exists(self):
+        """Check if UDP stream exists by trying to read from it with timeout"""
+        logger.info(f"Checking for UDP stream at {self.udp_url}...")
 
-    global connected_clients
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-timeout", str(self.stream_check_timeout * 1000000),  # microseconds
+            "-i", self.udp_url,
+            "-f", "image2pipe",
+            "-pix_fmt", "bgr24",
+            "-vcodec", "rawvideo",
+            "-frames:v", "1",  # Only try to get 1 frame
+            "-"
+        ]
 
-    while True:
-        # Try to start or restart ffmpeg process if not running or using placeholder
-        if ffmpeg_process is None or using_placeholder:
+        try:
+            process = subprocess.Popen(
+                ffmpeg_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+            # Wait for process to complete with timeout
             try:
-                # ffmpeg reads from udp://... where libcamera-vid is sending
-                ffmpeg_cmd = [
-                    "ffmpeg",
-                    "-i", "udp://172.17.0.1:5000",  # docker host IP from container
-                    "-f", "image2pipe",
-                    "-pix_fmt", "bgr24",
-                    "-vcodec", "rawvideo",
-                    "-"
-                ]
+                stdout, stderr = process.communicate(timeout=self.stream_check_timeout + 2)
 
-                # Try to start the ffmpeg process
-                ffmpeg_process = subprocess.Popen(
-                    ffmpeg_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL
-                )
+                if process.returncode == 0 and stdout and len(stdout) >= self.frame_size:
+                    logger.info("UDP stream detected and working")
+                    return True
+                else:
+                    logger.info("UDP stream not available - no data received")
+                    return False
 
-                logger.info("Started ffmpeg process to capture video frames")
-                using_placeholder = False
-            except Exception as e:
-                logger.warning(f"Failed to start ffmpeg process: {e}")
-                ffmpeg_process = None
-                using_placeholder = True
+            except subprocess.TimeoutExpired:
+                logger.info(f"UDP stream check timed out after {self.stream_check_timeout} seconds")
+                process.kill()
+                process.wait()
+                return False
 
-        # If we have a valid ffmpeg process, try to read a frame
-        if ffmpeg_process is not None and not using_placeholder:
-            try:
-                raw_frame = ffmpeg_process.stdout.read(frame_size)
-                if not raw_frame:
-                    logger.warning("No frame data received, switching to placeholder")
-                    using_placeholder = True
-                    continue
+        except Exception as e:
+            logger.error(f"Failed to start ffmpeg process: {e}")
+            return False
 
-                frame = np.frombuffer(raw_frame, np.uint8).reshape((height, width, 3))
-                ret, jpeg = cv2.imencode('.jpg', frame)
-                if not ret:
-                    logger.warning("Failed to encode frame to JPEG")
-                    using_placeholder = True
-                    continue
-
-                jpeg_bytes = jpeg.tobytes()
-            except Exception as e:
-                logger.warning(f"Error processing video frame: {e}")
-                using_placeholder = True
-                continue
+    def get_test_images(self):
+        """Get list of test images from the mounted directory"""
+        test_images = []
+        if os.path.exists(self.test_images_dir):
+            for i in range(1, 12):  # test1.jpg to test11.jpg
+                img_path = os.path.join(self.test_images_dir, f"test{i}.jpg")
+                if os.path.exists(img_path):
+                    test_images.append(img_path)
+            logger.info(f"Found {len(test_images)} test images")
         else:
-            # Use placeholder black frame
-            if black_jpeg_bytes is None:
-                logger.warning("No placeholder frame available")
-                await asyncio.sleep(1)  # Longer delay when no frame is available
+            logger.warning(f"Test images directory {self.test_images_dir} not found")
+        return test_images
+
+    async def stream_from_udp(self, ws):
+        """Stream video from UDP source"""
+        logger.info("Starting UDP stream...")
+
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-i", self.udp_url,
+            "-f", "image2pipe",
+            "-pix_fmt", "bgr24",
+            "-vcodec", "rawvideo",
+            "-"
+        ]
+
+        ffmpeg_process = subprocess.Popen(
+            ffmpeg_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+
+        frame_count = 0
+        while True:
+            raw_frame = ffmpeg_process.stdout.read(self.frame_size)
+            if not raw_frame:
+                logger.warning("UDP stream ended or interrupted")
+                break
+
+            frame = np.frombuffer(raw_frame, np.uint8).reshape((self.height, self.width, 3))
+            ret, jpeg = cv2.imencode('.jpg', frame)
+            if not ret:
                 continue
 
-            jpeg_bytes = black_jpeg_bytes
-            if not using_placeholder:
-                logger.info("Using placeholder black frame")
-                using_placeholder = True
+            await ws.send(jpeg.tobytes())
+            frame_count += 1
 
-        # Send frame to all connected clients
-        if connected_clients:
-            # Create a copy of the set to avoid modification during iteration
-            clients_to_remove = set()
+            if frame_count % 300 == 0:  # Log every 10 seconds at 30fps
+                logger.info(f"Streamed {frame_count} frames from UDP")
 
-            for client in connected_clients:
-                success = await send_frame(client, jpeg_bytes)
-                if not success:
-                    clients_to_remove.add(client)
+            await asyncio.sleep(0)
 
-            # Remove disconnected clients
-            connected_clients -= clients_to_remove
+        ffmpeg_process.terminate()
 
-        # Adjust sleep time based on whether we're using real video or placeholder
-        await asyncio.sleep(0.01 if not using_placeholder else 1.0)  # Longer delay for placeholder
+    async def stream_test_content(self, ws):
+        """Stream test images and send test messages"""
+        logger.info("Starting test content mode...")
 
-        # Periodically try to restart the video stream if using placeholder
-        if using_placeholder and ffmpeg_process is not None:
-            # Check if process is still running
-            if ffmpeg_process.poll() is not None:
-                ffmpeg_process = None
-                logger.info("ffmpeg process terminated, will try to restart")
+        # Send initial test message
+        test_message = "WebSocket test - no UDP stream detected, sending test content"
+        await ws.send(test_message.encode())
+        print(f"Sent test message: {test_message}")
 
-    logger.info("Video processing loop ended")
+        test_images = self.get_test_images()
 
-async def send_frame(websocket, frame_data):
-    try:
-        await websocket.send(frame_data)
-        return True
-    except websockets.exceptions.ConnectionClosed:
-        logger.info(f"Client disconnected during frame send: {websocket.remote_address}")
-        return False
-    except Exception as e:
-        logger.error(f"Error sending frame: {e}")
-        return False
+        if not test_images:
+            # If no test images, send periodic test messages
+            logger.info("No test images found, sending periodic test messages")
+            message_count = 0
+            while True:
+                message = f"Test message #{message_count + 1} - WebSocket connection active"
+                await ws.send(message.encode())
+                print(f"Sent: {message}")
+                message_count += 1
+                await asyncio.sleep(self.test_image_interval)
+        else:
+            # Cycle through test images
+            logger.info(f"Cycling through {len(test_images)} test images")
+            image_index = 0
+            frame_count = 0
 
-async def handle_client(websocket, path=None):
-    client_address = websocket.remote_address
-    logger.info(f"New client connected: {client_address}")
+            while True:
+                try:
+                    img_path = test_images[image_index]
+                    frame = cv2.imread(img_path)
 
-    global connected_clients
-    connected_clients.add(websocket)
-    logger.info(f"Added client to connected_clients. Total clients: {len(connected_clients)}")
+                    if frame is not None:
+                        # Resize to target dimensions if needed
+                        frame = cv2.resize(frame, (self.width, self.height))
 
-    try:
-        # Keep the connection open
-        await websocket.wait_closed()
-    except websockets.exceptions.ConnectionClosedOK:
-        logger.info(f"Client disconnected normally: {client_address}")
-    except websockets.exceptions.ConnectionClosedError as e:
-        logger.warning(f"Client connection closed with error: {client_address}, {e}")
-    except Exception as e:
-        logger.error(f"Unexpected error with client {client_address}: {e}")
-    finally:
-        # Remove client from set when disconnected
-        if websocket in connected_clients:
-            connected_clients.remove(websocket)
-            logger.info(f"Removed client from connected_clients. Remaining clients: {len(connected_clients)}")
+                        ret, jpeg = cv2.imencode('.jpg', frame)
+                        if ret:
+                            await ws.send(jpeg.tobytes())
+                            frame_count += 1
 
-async def main():
-    # Start the websocket server
-    host = "0.0.0.0"
-    port = 8765
+                            if frame_count % 30 == 0:  # Log every second at 30fps
+                                print(f"Sent test image: {os.path.basename(img_path)} (frame {frame_count})")
 
-    # Start the websocket server
-    async with websockets.serve(handle_client, host, port):
-        logger.info(f"Websocket server started on {host}:{port}")
-        await asyncio.Future()  # Run forever
+                    # Move to next image
+                    image_index = (image_index + 1) % len(test_images)
 
-    # Start video processing in the background
-    video_task = asyncio.create_task(process_video_frames())
+                    # Send occasional test message
+                    if frame_count % 150 == 0:  # Every 5 seconds at 30fps
+                        message = f"Test mode active - cycled through {frame_count} test frames"
+                        await ws.send(message.encode())
+                        print(f"Status: {message}")
 
+                    await asyncio.sleep(self.test_image_interval)
+
+                except Exception as e:
+                    logger.error(f"Error processing test image {img_path}: {e}")
+                    image_index = (image_index + 1) % len(test_images)
+                    await asyncio.sleep(self.test_image_interval)
+
+
+async def stream():
+    """Main streaming function with automatic fallback"""
+    # Initialize the stream manager
+    stream_manager = VideoStreamManager(
+        stream_check_timeout=5,  # 5 seconds to check for stream
+        test_image_interval=1 / 30,  # 30fps for test images
+    )
+
+    # Check if UDP stream exists
+    stream_exists = stream_manager.check_stream_exists()
+
+    # Connect to WebSocket
+    async with websockets.connect(stream_manager.ws_url) as ws:
+        logger.info(f"Connected to WebSocket at {stream_manager.ws_url}")
+
+        if stream_exists:
+            logger.info("UDP stream available - starting live streaming")
+            await stream_manager.stream_from_udp(ws)
+        else:
+            logger.info("No UDP stream - starting test content mode")
+            await stream_manager.stream_test_content(ws)
+
+
+# Alternative function with configurable parameters
+async def stream_with_config(udp_url="udp://172.17.0.1:5000",
+                             ws_url="ws://ws-server:8765",
+                             test_images_dir="/app/testImages",
+                             stream_check_timeout=5,
+                             test_fps=30):
+    """Stream function with configurable parameters"""
+    stream_manager = VideoStreamManager(
+        udp_url=udp_url,
+        ws_url=ws_url,
+        test_images_dir=test_images_dir,
+        stream_check_timeout=stream_check_timeout,
+        test_image_interval=1 / test_fps,
+    )
+
+    stream_exists = stream_manager.check_stream_exists()
+
+    async with websockets.connect(stream_manager.ws_url) as ws:
+        logger.info(f"Connected to WebSocket at {stream_manager.ws_url}")
+
+        if stream_exists:
+            await stream_manager.stream_from_udp(ws)
+        else:
+            await stream_manager.stream_test_content(ws)
+
+
+# Example usage:
+# asyncio.run(stream())
+#
+# Or with custom settings:
+# asyncio.run(stream_with_config(
+#     stream_check_timeout=10,    # Wait 10 seconds for stream
+#     test_fps=15,               # 15fps for test images
+#     test_images_dir="/custom/path"
+# ))
 if __name__ == "__main__":
-    logger.info("Starting video-stream module")
-    asyncio.run(main())
+    asyncio.run(stream())

@@ -25,6 +25,12 @@ services:
     restart: unless-stopped
     depends_on:
       - mqtt-broker
+
+  ws-server:
+    build: modules/ws-server
+    container_name: ws-server
+    ports:
+      - "8765:8765"
     networks:
       - default
 
@@ -32,6 +38,8 @@ services:
     build: ./modules/video-stream
     container_name: video-stream
     restart: unless-stopped
+    volumes:
+      - ./testImages:/app/testImages
     ports:
       - "8765:8765"
     networks:
@@ -42,6 +50,6 @@ services:
     container_name: test-ws
     restart: unless-stopped
     depends_on:
-      - video-stream
+      - ws-server
     networks:
       - default
