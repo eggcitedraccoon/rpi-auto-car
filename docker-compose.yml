@@ -3,6 +3,8 @@ services:
     image: eclipse-mosquitto:2.0
     container_name: mqtt
     restart: unless-stopped
+    depends_on:
+      - web-dashboard
     volumes:
       - ./modules/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
@@ -54,5 +56,17 @@ services:
     restart: unless-stopped
     depends_on:
       - ws-server
+    networks:
+      - default
+
+  web-dashboard:
+    build: ./modules/web-dashboard
+    container_name: web-dashboard
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./shared/module.list:/app/shared/module.list
+    restart: unless-stopped
     networks:
       - default

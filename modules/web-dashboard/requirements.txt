@@ -1,0 +1,4 @@
+# modules/web-dashboard/requirements.txt
+fastapi
+uvicorn
+jinja2

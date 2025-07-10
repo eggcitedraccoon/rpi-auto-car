@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Module Status</title>
+  <meta http-equiv="refresh" content="5">
+  <style>
+    body { font-family: sans-serif; }
+    .status { margin: 1em 0; }
+    .running { color: green; }
+    .exited, .not { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Module Status</h1>
+  {% for name, status in statuses.items() %}
+    <div class="status">
+      <strong>{{ name }}</strong>:
+      <span class="{{ status }}">{{ status }}</span>
+      [<a href="/logs/{{ name }}">Logs</a>]
+    </div>
+  {% endfor %}
+</body>
+</html>
