@@ -34,6 +34,8 @@ services:
     build: ./modules/video-stream
     container_name: video-stream
     restart: unless-stopped
+    volumes:
+      - ./testImages:/app/testImages
     depends_on:
       - ws-server
     networks:
